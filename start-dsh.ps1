@@ -9,6 +9,7 @@ http://127.0.0.1:3080（端口可通过 -Port 修改）。
 
 - 若目标端口已有 DSH Web 实例在运行，脚本不会重复启动，只会打开浏览器。
 - 启动前检查北京时间是否处于高峰时段（9:00-12:00、14:00-18:00）；若处于高峰时段，会提示"当前为高峰时段，是否继续进入"，输入 y 继续、n 退出；非高峰时段直接启动。
+- 自 2026-08-23（周日）00:00 起，DeepSeek 周末（周六、周日）全天不再区分峰谷时段，因此周末直接进入，不触发高峰时段询问。
 - 默认前台运行：日志直接输出到当前终端，按 Ctrl+C 停止服务。
 - 使用 -Background 可后台运行（日志写入 %USERPROFILE%\.dsh\logs，并打印 PID 与停止命令）。
 - 工作目录会自动切换到本脚本所在目录（D:\CODE），DSH 会话按该目录归类。
@@ -93,6 +94,14 @@ function Test-BeijingPeakHours {
     return (($hour -ge 9 -and $hour -lt 12) -or ($hour -ge 14 -and $hour -lt 18))
 }
 
+function Test-BeijingWeekend {
+    # 北京时间 = UTC+8（中国无夏令时）。
+    # 自 2026-08-23（周日）00:00 起，DeepSeek 周末（周六、周日）全天不再区分峰谷时段，
+    # 因此周末无需进行高峰时段检测、无需询问是否直接进入。
+    $beijingNow = [DateTime]::UtcNow.AddHours(8)
+    return ($beijingNow.DayOfWeek -eq [DayOfWeek]::Saturday -or $beijingNow.DayOfWeek -eq [DayOfWeek]::Sunday)
+}
+
 # ---------- 已运行检测：端口已被占用则直接打开浏览器 ----------
 if ($Port -gt 0 -and (Test-PortOpen -HostName $BindHost -PortNumber $Port)) {
     Write-Host "DSH Web 已在运行：$webUrl"
@@ -100,8 +109,8 @@ if ($Port -gt 0 -and (Test-PortOpen -HostName $BindHost -PortNumber $Port)) {
     exit 0
 }
 
-# ---------- 高峰时段检查 ----------
-if (Test-BeijingPeakHours) {
+# ---------- 高峰时段检查（仅工作日；周末全天无峰谷区分，直接进入）----------
+if (-not (Test-BeijingWeekend) -and (Test-BeijingPeakHours)) {
     while ($true) {
         $answer = Read-Host '当前为高峰时段（北京时间 9:00-12:00、14:00-18:00），是否继续进入？请输入 y/n'
         if ($answer -match '^[Yy]$') { break }
