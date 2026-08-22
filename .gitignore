@@ -1,0 +1,5 @@
+# 本仓库仅跟踪 start-dsh.ps1 与 .gitignore 本身，
+# D:\CODE 下的其他项目（如 dark-hour 等）一律不纳入版本管理。
+*
+!start-dsh.ps1
+!.gitignore
